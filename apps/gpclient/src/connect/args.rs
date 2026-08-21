@@ -146,6 +146,13 @@ pub(crate) struct ConnectArgs {
     num_args=0..=1
   )]
   pub(super) browser: Option<String>,
+
+  #[arg(
+    long,
+    help = "Print the gateway cookie to stdout and exit instead of starting the VPN tunnel. \
+            Requires --cookie-cache. Outputs COOKIE=<value> and HOST=<gateway> on separate lines."
+  )]
+  pub(super) print_cookie: bool,
 }
 
 pub(super) fn build_os_profile(args: &ConnectArgs) -> OsProfile {

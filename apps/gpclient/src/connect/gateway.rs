@@ -327,6 +327,14 @@ impl ConnectHandler<'_> {
     allow_extend_session: bool,
     extension_auth: SessionExtensionAuth,
   ) -> Result<(), GatewayConnectError> {
+    // --print-cookie: emit the gateway cookie and exit before any tunnel setup.
+    // No tun device is opened, no logout is issued, no root required.
+    if self.args.print_cookie {
+      println!("COOKIE={}", cookie);
+      println!("HOST={}", gateway);
+      return Ok(());
+    }
+
     let mtu = self.args.mtu.unwrap_or(0);
     let (hip, csd_wrapper) = self.determine_hip_script();
     let hip_user = self.determine_hip_user();
