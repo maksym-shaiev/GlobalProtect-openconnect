@@ -33,7 +33,7 @@ jobs:
           ls -lh gpclient-smc
           cat SHA256SUMS
 
-      - name: Publish to GitHub Release (tag: gpclient-smc-latest)
+      - name: "Publish to GitHub Release (tag: gpclient-smc-latest)"
         uses: softprops/action-gh-release@v2
         with:
           tag_name: gpclient-smc-latest
