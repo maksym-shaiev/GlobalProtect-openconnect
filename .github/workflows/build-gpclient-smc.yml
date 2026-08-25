@@ -14,6 +14,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: smc-distribution
+          submodules: recursive
+
+      - name: Install C build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake autopoint libtool gettext patch pkg-config \
+            libxml2-dev zlib1g-dev liblz4-dev libgnutls28-dev \
+            libp11-kit-dev nettle-dev libgmp-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
