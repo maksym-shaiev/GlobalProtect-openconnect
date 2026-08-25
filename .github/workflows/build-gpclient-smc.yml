@@ -7,9 +7,17 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: write
+
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            suffix: ubuntu24.04
+          - runner: ubuntu-26.04
+            suffix: ubuntu26.04
 
     steps:
       - name: Checkout smc-distribution (includes feat/print-cookie patch)
@@ -23,7 +31,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
             autoconf automake autopoint libtool gettext patch pkg-config \
-            libxml2-dev zlib1g-dev liblz4-dev libgnutls28-dev \
+            libxml2-dev zlib1g-dev liblz4-dev libgnutls-dev \
             libp11-kit-dev nettle-dev libgmp-dev
 
       - name: Install Rust toolchain
@@ -31,17 +39,22 @@ jobs:
 
       - name: Cache Rust build artefacts
         uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.suffix }}
 
       - name: Build gpclient (CLI only, no GUI)
         run: cargo build --release -p gpclient --no-default-features
 
       - name: Prepare release assets
         run: |
-          cp target/release/gpclient gpclient-smc
-          strip gpclient-smc
-          sha256sum gpclient-smc > SHA256SUMS
-          echo "Built binary:"
-          ls -lh gpclient-smc
+          VERSION=$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)
+          BINARY_NAME="gpclient-smc_${VERSION}_${{ matrix.suffix }}_amd64"
+          cp target/release/gpclient "$BINARY_NAME"
+          strip "$BINARY_NAME"
+          sha256sum "$BINARY_NAME" >> SHA256SUMS
+          echo "BINARY_NAME=$BINARY_NAME" >> "$GITHUB_ENV"
+          echo "Built binary: $BINARY_NAME"
+          ls -lh "$BINARY_NAME"
           cat SHA256SUMS
 
       - name: "Publish to GitHub Release (tag: gpclient-smc-latest)"
@@ -57,5 +70,5 @@ jobs:
             Used by [smc-gp-vpn](https://github.com/maksym-shaiev/smc-gp-vpn) installer.
           make_latest: true
           files: |
-            gpclient-smc
+            ${{ env.BINARY_NAME }}
             SHA256SUMS
