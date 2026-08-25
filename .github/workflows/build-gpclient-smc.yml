@@ -1,0 +1,50 @@
+name: Build gpclient-smc binary
+
+on:
+  push:
+    branches: [smc-distribution]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout smc-distribution (includes feat/print-cookie patch)
+        uses: actions/checkout@v4
+        with:
+          ref: smc-distribution
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artefacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build gpclient (CLI only, no GUI)
+        run: cargo build --release -p gpclient --no-default-features
+
+      - name: Prepare release assets
+        run: |
+          cp target/release/gpclient gpclient-smc
+          strip gpclient-smc
+          sha256sum gpclient-smc > SHA256SUMS
+          echo "Built binary:"
+          ls -lh gpclient-smc
+          cat SHA256SUMS
+
+      - name: Publish to GitHub Release (tag: gpclient-smc-latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: gpclient-smc-latest
+          name: gpclient-smc latest build
+          body: |
+            Automated build of `gpclient` with the `--print-cookie` patch applied.
+
+            Branch: `smc-distribution` (built on top of `feat/print-cookie`)
+
+            Used by [smc-gp-vpn](https://github.com/maksym-shaiev/smc-gp-vpn) installer.
+          make_latest: true
+          files: |
+            gpclient-smc
+            SHA256SUMS
