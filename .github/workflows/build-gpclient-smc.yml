@@ -56,21 +56,29 @@ jobs:
         with:
           key: ${{ matrix.suffix }}
 
-      - name: Build gpclient (CLI only, no GUI)
-        run: cargo build --release -p gpclient --no-default-features
+      - name: Build gpclient and gpauth (CLI only, no GUI)
+        # Both binaries from the same tree so their CLI contracts always match
+        # (gpclient spawns gpauth for SAML/CAS auth).
+        run: cargo build --release -p gpclient -p gpauth --no-default-features
 
       - name: Prepare release assets
         run: |
           VERSION=$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)
           BINARY_NAME="gpclient-smc_${VERSION}_${{ matrix.suffix }}_${{ matrix.arch }}"
+          AUTH_NAME="gpauth-smc_${VERSION}_${{ matrix.suffix }}_${{ matrix.arch }}"
           SUMS_NAME="SHA256SUMS-${{ matrix.suffix }}"
           cp target/release/gpclient "$BINARY_NAME"
-          strip "$BINARY_NAME"
-          sha256sum "$BINARY_NAME" > "$SUMS_NAME"
+          cp target/release/gpauth "$AUTH_NAME"
+          strip "$BINARY_NAME" "$AUTH_NAME"
+          {
+            sha256sum "$BINARY_NAME"
+            sha256sum "$AUTH_NAME"
+          } > "$SUMS_NAME"
           echo "BINARY_NAME=$BINARY_NAME" >> "$GITHUB_ENV"
+          echo "AUTH_NAME=$AUTH_NAME"     >> "$GITHUB_ENV"
           echo "SUMS_NAME=$SUMS_NAME"     >> "$GITHUB_ENV"
-          echo "Built binary: $BINARY_NAME"
-          ls -lh "$BINARY_NAME"
+          echo "Built binaries: $BINARY_NAME, $AUTH_NAME"
+          ls -lh "$BINARY_NAME" "$AUTH_NAME"
           cat "$SUMS_NAME"
 
       - name: "Publish to GitHub Release (tag: gpclient-smc-latest)"
@@ -87,4 +95,5 @@ jobs:
           make_latest: true
           files: |
             ${{ env.BINARY_NAME }}
+            ${{ env.AUTH_NAME }}
             ${{ env.SUMS_NAME }}
