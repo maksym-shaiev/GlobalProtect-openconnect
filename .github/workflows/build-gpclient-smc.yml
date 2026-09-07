@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
     permissions:
       contents: write
 
@@ -16,23 +17,36 @@ jobs:
         include:
           - runner: ubuntu-24.04
             suffix: ubuntu24.04
+            arch: amd64
           - runner: ubuntu-26.04
             suffix: ubuntu26.04
+            arch: amd64
+          - runner: ubuntu-24.04
+            suffix: arch
+            arch: x86_64
+            container: archlinux:base-devel
 
     steps:
-      - name: Checkout smc-distribution (includes feat/print-cookie patch)
-        uses: actions/checkout@v4
-        with:
-          ref: smc-distribution
-          submodules: recursive
+      - name: Install build dependencies (Arch container)
+        if: matrix.container != ''
+        run: |
+          pacman -Syu --noconfirm git curl \
+            libxml2 zlib lz4 gnutls p11-kit nettle gmp
 
-      - name: Install C build dependencies
+      - name: Install build dependencies (Ubuntu)
+        if: matrix.container == ''
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
             autoconf automake autopoint libtool gettext patch pkg-config \
             libxml2-dev zlib1g-dev liblz4-dev libgnutls28-dev \
             libp11-kit-dev nettle-dev libgmp-dev
+
+      - name: Checkout smc-distribution (includes feat/print-cookie patch)
+        uses: actions/checkout@v4
+        with:
+          ref: smc-distribution
+          submodules: recursive
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -48,7 +62,7 @@ jobs:
       - name: Prepare release assets
         run: |
           VERSION=$(grep '^version' Cargo.toml | head -1 | cut -d'"' -f2)
-          BINARY_NAME="gpclient-smc_${VERSION}_${{ matrix.suffix }}_amd64"
+          BINARY_NAME="gpclient-smc_${VERSION}_${{ matrix.suffix }}_${{ matrix.arch }}"
           SUMS_NAME="SHA256SUMS-${{ matrix.suffix }}"
           cp target/release/gpclient "$BINARY_NAME"
           strip "$BINARY_NAME"
